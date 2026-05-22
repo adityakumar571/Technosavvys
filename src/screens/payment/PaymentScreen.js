@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import RazorpayCheckout from 'react-native-razorpay';
+// import RazorpayCheckout from 'react-native-razorpay'; // TODO: re-enable after New Architecture fix
 import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { COLORS, GRADIENTS } from '../../constants/colors';
@@ -42,6 +42,13 @@ const PaymentScreen = ({ navigation, route }) => {
       return;
     }
 
+    // RazorpayCheckout disabled temporarily — show alert instead
+    Alert.alert(
+      'Payment Unavailable',
+      'Payment gateway is temporarily unavailable. Please try again later.',
+    );
+
+    /* TODO: re-enable when react-native-razorpay is fixed for New Architecture
     try {
       setLoading(true);
       const orderRes = await api.post('/payments/create-order', {
@@ -70,7 +77,6 @@ const PaymentScreen = ({ navigation, route }) => {
 
       const paymentData = await RazorpayCheckout.open(options);
 
-      // Verify payment
       await api.post('/payments/verify', {
         razorpay_order_id: paymentData.razorpay_order_id,
         razorpay_payment_id: paymentData.razorpay_payment_id,
@@ -81,12 +87,13 @@ const PaymentScreen = ({ navigation, route }) => {
 
       navigation.replace('PaymentSuccess', { item });
     } catch (err) {
-      if (err.code !== 2) { // 2 = user cancelled
+      if (err.code !== 2) {
         Alert.alert('Payment Failed', err.description || 'Payment could not be processed');
       }
     } finally {
       setLoading(false);
     }
+    */
   };
 
   return (

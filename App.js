@@ -17,6 +17,11 @@ const LoadingScreen = () => (
 );
 
 const App = () => {
+  useEffect(() => {
+    // Purana stuck isLoading state clear karo
+    persistor.purge();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>

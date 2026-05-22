@@ -6,7 +6,14 @@ export const loginUser = createAsyncThunk('auth/login', async (credentials, { re
     const res = await api.post('/auth/login', credentials);
     return res.data.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Login failed');
+    console.log('Login error:', JSON.stringify({
+      message: err.message,
+      code: err.code,
+      status: err.response?.status,
+      data: err.response?.data,
+      url: err.config?.baseURL + err.config?.url,
+    }));
+    return rejectWithValue(err.response?.data?.message || err.message || 'Login failed');
   }
 });
 
@@ -15,7 +22,15 @@ export const registerUser = createAsyncThunk('auth/register', async (userData, {
     const res = await api.post('/auth/register', userData);
     return res.data.data;
   } catch (err) {
-    return rejectWithValue(err.response?.data?.message || 'Registration failed');
+    console.log('Register error full:', JSON.stringify({
+      message: err.message,
+      code: err.code,
+      status: err.response?.status,
+      data: err.response?.data,
+      url: err.config?.url,
+      baseURL: err.config?.baseURL,
+    }));
+    return rejectWithValue(err.response?.data?.message || err.message || 'Registration failed');
   }
 });
 
@@ -52,6 +67,7 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.isLoading = false;
     },
     clearError: (state) => {
       state.error = null;

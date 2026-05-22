@@ -1,8 +1,9 @@
-export const API_BASE_URL = 'http://10.0.2.2:5000/api'; // Android emulator
+export const API_BASE_URL = 'http://192.168.1.11:5000/api'; // Real device (same WiFi)
+// export const API_BASE_URL = 'http://10.0.2.2:5000/api'; // Android emulator
 // export const API_BASE_URL = 'http://localhost:5000/api'; // iOS simulator
 // export const API_BASE_URL = 'https://your-production-api.com/api'; // Production
 
-export const SOCKET_URL = 'http://10.0.2.2:5000';
+export const SOCKET_URL = 'http://192.168.1.11:5000';
 
 export const CATEGORIES = [
   { id: 'SSC', label: 'SSC', icon: '📋' },

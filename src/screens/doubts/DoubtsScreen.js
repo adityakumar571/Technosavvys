@@ -4,7 +4,7 @@ import {
   StatusBar, RefreshControl, TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import FastImage from 'react-native-fast-image';
+import FastImage from '@d11/react-native-fast-image';
 import moment from 'moment';
 import api from '../../services/api';
 import { COLORS } from '../../constants/colors';

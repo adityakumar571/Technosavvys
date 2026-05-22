@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
-import Video from 'react-native-video';
+// import Video from 'react-native-video'; // TODO: re-enable after New Architecture fix
+// import Orientation from 'react-native-orientation-locker'; // TODO: re-enable after New Architecture fix
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Orientation from 'react-native-orientation-locker';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import api from '../../services/api';
 import { COLORS } from '../../constants/colors';
 
@@ -21,7 +21,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
   const handleProgress = async (data) => {
     const pct = (data.currentTime / data.seekableDuration) * 100;
     setProgress(pct);
-    if (pct % 10 < 1) { // Update every ~10%
+    if (pct % 10 < 1) {
       try {
         await api.post(`/videos/${videoId}/progress`, { progress: Math.floor(pct) });
       } catch (e) {}
@@ -29,11 +29,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
   };
 
   const toggleFullscreen = () => {
-    if (isFullscreen) {
-      Orientation.lockToPortrait();
-    } else {
-      Orientation.lockToLandscape();
-    }
+    // Orientation.lockToPortrait() / lockToLandscape() — disabled until package fixed
     setIsFullscreen(!isFullscreen);
   };
 
@@ -47,9 +43,9 @@ const VideoPlayerScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {/* Video */}
+      {/* Video Player — react-native-video disabled temporarily */}
       <View style={[styles.videoContainer, isFullscreen && styles.fullscreen]}>
-        <Video
+        {/* <Video
           ref={videoRef}
           source={{ uri: videoUrl }}
           style={styles.video}
@@ -58,7 +54,11 @@ const VideoPlayerScreen = ({ navigation, route }) => {
           onLoad={(data) => setDuration(data.duration)}
           resizeMode="contain"
           controls={false}
-        />
+        /> */}
+        <View style={styles.videoPlaceholder}>
+          <Icon name="play-circle-outline" size={64} color="rgba(255,255,255,0.5)" />
+          <Text style={styles.placeholderText}>Video player coming soon</Text>
+        </View>
 
         {/* Controls Overlay */}
         <View style={styles.overlay}>
@@ -107,6 +107,8 @@ const styles = StyleSheet.create({
   videoContainer: { width: '100%', height: width * 9 / 16, backgroundColor: '#000', position: 'relative' },
   fullscreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999, height: '100%' },
   video: { width: '100%', height: '100%' },
+  videoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  placeholderText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'space-between', padding: 16 },
   backBtn: { alignSelf: 'flex-start', padding: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, marginTop: 30 },
   playBtn: { alignSelf: 'center', padding: 12, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 40 },

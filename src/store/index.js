@@ -10,14 +10,15 @@ import notificationReducer from './slices/notificationSlice';
 import testReducer from './slices/testSlice';
 import uiReducer from './slices/uiSlice';
 
-const persistConfig = {
-  key: 'root',
+// Auth persist — isLoading aur error save nahi hoga
+const authPersistConfig = {
+  key: 'auth',
   storage: AsyncStorage,
-  whitelist: ['auth'],
+  blacklist: ['isLoading', 'error'],
 };
 
 const rootReducer = combineReducers({
-  auth: authReducer,
+  auth: persistReducer(authPersistConfig, authReducer),
   courses: courseReducer,
   batches: batchReducer,
   live: liveReducer,
@@ -26,7 +27,14 @@ const rootReducer = combineReducers({
   ui: uiReducer,
 });
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+// Root level persist — sirf auth persist hoga
+const rootPersistConfig = {
+  key: 'root',
+  storage: AsyncStorage,
+  whitelist: ['auth'],
+};
+
+const persistedReducer = persistReducer(rootPersistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,

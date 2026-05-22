@@ -40,6 +40,8 @@ const RegisterScreen = ({ navigation }) => {
       password: form.password,
     }));
 
+    console.log('Register result:', JSON.stringify(result));
+
     if (registerUser.fulfilled.match(result)) {
       await AsyncStorage.setItem('token', result.payload.token);
     } else {
