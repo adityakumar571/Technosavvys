@@ -74,14 +74,14 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
     ndkVersion "27.1.12297006"
-    buildToolsVersion "35.0.0"
-    compileSdk 35
+    buildToolsVersion "36.0.0"
+    compileSdk 36
 
     namespace "com.technosavvys"
     defaultConfig {
         applicationId "com.technosavvys"
         minSdkVersion 24
-        targetSdkVersion 35
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0"
     }
@@ -105,6 +105,11 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+    applicationVariants.all { variant ->
+    variant.outputs.all {
+        outputFileName = "Technosavvys.apk"
+    }
+}
 }
 
 dependencies {
