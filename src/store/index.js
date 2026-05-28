@@ -9,8 +9,9 @@ import liveReducer from './slices/liveSlice';
 import notificationReducer from './slices/notificationSlice';
 import testReducer from './slices/testSlice';
 import uiReducer from './slices/uiSlice';
+import bannerReducer from './slices/bannerSlice';
+import categoryReducer from './slices/categorySlice';
 
-// Auth persist — isLoading aur error save nahi hoga
 const authPersistConfig = {
   key: 'auth',
   storage: AsyncStorage,
@@ -25,9 +26,10 @@ const rootReducer = combineReducers({
   notifications: notificationReducer,
   tests: testReducer,
   ui: uiReducer,
+  banners: bannerReducer,
+  categories: categoryReducer,
 });
 
-// Root level persist — sirf auth persist hoga
 const rootPersistConfig = {
   key: 'root',
   storage: AsyncStorage,

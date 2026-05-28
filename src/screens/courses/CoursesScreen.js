@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   StatusBar, RefreshControl,
@@ -6,39 +6,64 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchCourses } from '../../store/slices/courseSlice';
+import { fetchCategories } from '../../store/slices/categorySlice';
 import { COLORS } from '../../constants/colors';
-import { CATEGORIES } from '../../constants';
 import CourseCard from '../../components/CourseCard';
-import CategoryChip from '../../components/CategoryChip';
+import { CourseCardSkeleton, CategorySkeleton } from '../../components/Skeleton';
+
+const F = { urbanist: 'Urbanist-Medium' };
 
 const CoursesScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { list: courses, isLoading } = useSelector((state) => state.courses);
+  const { list: courses, isLoading, total } = useSelector((s) => s.courses);
+  const { list: categories, isLoading: catsLoading } = useSelector((s) => s.categories);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const load = useCallback((pg = 1, cat = selectedCategory) => {
+    dispatch(fetchCourses({ category: cat || undefined, limit: 10, page: pg }));
+  }, [dispatch, selectedCategory]);
 
   useEffect(() => {
-    dispatch(fetchCourses({ category: selectedCategory, limit: 20 }));
+    dispatch(fetchCategories());
+    load(1);
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+    load(1, selectedCategory);
   }, [selectedCategory]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await dispatch(fetchCourses({ category: selectedCategory, limit: 20 }));
+    setPage(1);
+    await dispatch(fetchCourses({ category: selectedCategory || undefined, limit: 10, page: 1 }));
     setRefreshing(false);
   };
 
+  const loadMore = async () => {
+    if (loadingMore || courses.length >= total) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    await dispatch(fetchCourses({ category: selectedCategory || undefined, limit: 10, page: nextPage }));
+    setLoadingMore(false);
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>All Courses</Text>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>All Courses</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Search')}>
           <Icon name="magnify" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={courses}
+        data={isLoading && page === 1 ? [] : courses}
         renderItem={({ item }) => (
           <CourseCard
             course={item}
@@ -46,54 +71,71 @@ const CoursesScreen = ({ navigation }) => {
           />
         )}
         keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={s.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
         ListHeaderComponent={
-          <FlatList
-            data={[{ id: null, label: 'All', icon: '🌟' }, ...CATEGORIES]}
-            renderItem={({ item }) => (
-              <CategoryChip
-                item={item}
-                isSelected={selectedCategory === item.id}
-                onPress={() => setSelectedCategory(item.id)}
-              />
-            )}
-            keyExtractor={(item) => String(item.id)}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.categories}
-          />
-        }
-        ListEmptyComponent={
-          !isLoading && (
-            <View style={styles.empty}>
-              <Icon name="book-open-outline" size={60} color={COLORS.textLight} />
-              <Text style={styles.emptyText}>No courses found</Text>
+          <View>
+            {/* Category Filter */}
+            <View style={s.catWrap}>
+              {catsLoading ? <CategorySkeleton /> : (
+                <FlatList
+                  data={[{ _id: 'all', name: 'All', icon: '🌟' }, ...categories]}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item._id}
+                  contentContainerStyle={{ paddingRight: 8 }}
+                  renderItem={({ item }) => {
+                    const isAll = item._id === 'all';
+                    const active = isAll ? selectedCategory === null : selectedCategory === item.name;
+                    return (
+                      <TouchableOpacity
+                        onPress={() => setSelectedCategory(isAll ? null : item.name)}
+                        style={[s.catChip, active && { backgroundColor: item.color || COLORS.primary, borderColor: item.color || COLORS.primary }]}
+                      >
+                        <Text style={s.catIcon}>{item.icon || '📚'}</Text>
+                        <Text style={[s.catLabel, active && { color: COLORS.white }]}>{item.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              )}
             </View>
-          )
+            {/* Count */}
+            <Text style={s.countText}>{total || 0} courses found</Text>
+            {/* Skeleton */}
+            {isLoading && page === 1 && [1, 2, 3].map((i) => <CourseCardSkeleton key={i} />)}
+          </View>
+        }
+        ListFooterComponent={loadingMore ? <CourseCardSkeleton /> : null}
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={s.empty}>
+              <Icon name="book-open-outline" size={56} color={COLORS.textLight} />
+              <Text style={s.emptyTitle}>No courses found</Text>
+              <Text style={s.emptySub}>Try a different category</Text>
+            </View>
+          ) : null
         }
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 12,
-    backgroundColor: COLORS.white,
-    elevation: 2,
-  },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.textPrimary },
-  categories: { paddingHorizontal: 16, paddingVertical: 12 },
-  list: { padding: 16 },
-  empty: { alignItems: 'center', paddingTop: 60 },
-  emptyText: { fontSize: 16, color: COLORS.textSecondary, marginTop: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 14, backgroundColor: COLORS.white, elevation: 2 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: COLORS.textPrimary, fontFamily: F.urbanist },
+  catWrap: { paddingHorizontal: 16, paddingVertical: 12 },
+  catChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.border, marginRight: 8 },
+  catIcon: { fontSize: 15 },
+  catLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500', fontFamily: F.urbanist },
+  countText: { fontSize: 13, color: COLORS.textSecondary, paddingHorizontal: 16, marginBottom: 8, fontFamily: F.urbanist },
+  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 8 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: COLORS.textSecondary, fontFamily: F.urbanist },
+  emptySub: { fontSize: 13, color: COLORS.textLight, fontFamily: F.urbanist },
 });
 
 export default CoursesScreen;
