@@ -30,16 +30,14 @@ const BatchDetailScreen = ({ navigation, route }) => {
 
   const load = useCallback(async () => {
     dispatch(fetchBatchById(batchId));
-    if (isEnrolled) {
-      dispatch(fetchBatchContent(batchId));
-    } else {
-      // Load free videos for preview
-      try {
-        const res = await api.get('/videos/free', { params: { batchId } });
-        setFreeVideos(res.data.data.videos || []);
-      } catch (_) {}
-    }
-  }, [batchId, isEnrolled, dispatch]);
+    // Always load batch content — backend will handle auth
+    // Also load free videos for non-enrolled users
+    dispatch(fetchBatchContent(batchId));
+    try {
+      const res = await api.get('/videos/free', { params: { batchId } });
+      setFreeVideos(res.data.data.videos || []);
+    } catch (_) {}
+  }, [batchId, dispatch]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -123,15 +121,16 @@ const BatchDetailScreen = ({ navigation, route }) => {
       );
     }
 
+    // Enrolled — show skeleton while loading
     if (!batchContent) {
       return (
-        <View style={{ padding: 16 }}>
-          {[1, 2, 3].map((i) => (
-            <View key={i} style={s.contentItem}>
+        <View>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={[s.contentItem, { marginBottom: 10 }]}>
               <Skeleton width={56} height={56} borderRadius={10} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
+              <View style={{ flex: 1, marginLeft: 12, gap: 6 }}>
                 <Skeleton width="70%" height={14} />
-                <Skeleton width="40%" height={12} style={{ marginTop: 6 }} />
+                <Skeleton width="40%" height={12} />
               </View>
             </View>
           ))}
