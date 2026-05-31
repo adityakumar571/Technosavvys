@@ -20,9 +20,15 @@ import {
   LiveCardSkeleton, StatSkeleton,
 } from '../../components/Skeleton';
 import api from '../../services/api';
+import {
+  SafeAreaView,
+} from 'react-native-safe-area-context';
+
 
 const { width } = Dimensions.get('window');
-const F = { urbanist: 'Urbanist-Medium' };
+
+// Globally applying Urbanist-Medium as requested for the whole layout context
+const F_FAMILY = 'Urbanist-Medium';
 
 const HomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -58,7 +64,7 @@ const HomeScreen = ({ navigation }) => {
     try {
       const res = await api.get('/dashboard/student');
       setDashStats(res.data.data.stats);
-    } catch (_) {}
+    } catch (_) { }
     setStatsLoading(false);
   }, [dispatch]);
 
@@ -74,7 +80,6 @@ const HomeScreen = ({ navigation }) => {
     ? courses.filter((c) => c.category === selectedCategory)
     : courses;
 
-  // Banner auto-scroll
   useEffect(() => {
     if (banners.length < 2) return;
     const t = setInterval(() => setBannerIndex((i) => (i + 1) % banners.length), 3500);
@@ -82,7 +87,7 @@ const HomeScreen = ({ navigation }) => {
   }, [banners.length]);
 
   const handleBannerPress = (banner) => {
-    api.post(`/banners/${banner._id}/click`).catch(() => {});
+    api.post(`/banners/${banner._id}/click`).catch(() => { });
     if (banner.linkType === 'course' && banner.linkId) {
       navigation.navigate('CourseDetail', { courseId: banner.linkId });
     } else if (banner.linkType === 'batch' && banner.linkId) {
@@ -91,233 +96,260 @@ const HomeScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={s.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-      >
-        {/* ── Header ── */}
-        <LinearGradient colors={GRADIENTS.primary} style={s.header}>
-          <View style={s.headerTop}>
-            <View>
-              <Text style={s.greeting}>{greeting()}, 👋</Text>
-              <Text style={s.userName}>{user?.name || 'Student'}</Text>
-            </View>
-            <View style={s.headerActions}>
-              <TouchableOpacity onPress={() => navigation.navigate('Search')} style={s.headerBtn}>
-                <Icon name="magnify" size={24} color={COLORS.white} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={s.headerBtn}>
-                <Icon name="bell-outline" size={24} color={COLORS.white} />
-                {unreadCount > 0 && (
-                  <View style={s.badge}><Text style={s.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text></View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate('Search')} style={s.searchBar}>
-            <Icon name="magnify" size={20} color={COLORS.textSecondary} />
-            <Text style={s.searchPlaceholder}>Search courses, batches...</Text>
-          </TouchableOpacity>
-        </LinearGradient>
 
-        {/* ── Stats ── */}
-        <View style={s.statsCard}>
-          {statsLoading ? <StatSkeleton /> : (
-            <>
-              {[
-                { label: 'Courses', value: dashStats?.enrolledCourses ?? user?.enrolledCourses?.length ?? 0, icon: 'book-open', color: COLORS.primary },
-                { label: 'Streak', value: `${dashStats?.streak ?? user?.streak ?? 0}🔥`, icon: 'fire', color: COLORS.secondary },
-                { label: 'Points', value: dashStats?.totalPoints ?? user?.points ?? 0, icon: 'star', color: COLORS.accent },
-                { label: 'Tests', value: dashStats?.testsAttempted ?? user?.testAttempts?.length ?? 0, icon: 'clipboard-text', color: COLORS.success },
-              ].map((stat, i) => (
-                <View key={i} style={s.statItem}>
-                  <Icon name={stat.icon} size={20} color={stat.color} />
-                  <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
-                  <Text style={s.statLabel}>{stat.label}</Text>
-                </View>
-              ))}
-            </>
-          )}
-        </View>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: '#fff',
+      }}
+    >
+      <View style={s.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        >
 
-        {/* ── Banners ── */}
-        <View style={s.section}>
-          {bannersLoading ? <BannerSkeleton /> : banners.length > 0 ? (
-            <View>
-              <FlatList
-                data={banners}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item._id}
-                onMomentumScrollEnd={(e) => {
-                  const idx = Math.round(e.nativeEvent.contentOffset.x / (width - 32));
-                  setBannerIndex(idx);
-                }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity onPress={() => handleBannerPress(item)} activeOpacity={0.9}>
-                    <FastImage
-                      source={{ uri: item.imageUrl }}
-                      style={s.bannerImage}
-                      resizeMode={FastImage.resizeMode.cover}
-                    />
-                    {(item.title || item.subtitle) && (
-                      <View style={s.bannerOverlay}>
-                        {item.title ? <Text style={s.bannerTitle}>{item.title}</Text> : null}
-                        {item.subtitle ? <Text style={s.bannerSubtitle}>{item.subtitle}</Text> : null}
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
-              {banners.length > 1 && (
-                <View style={s.dots}>
-                  {banners.map((_, i) => (
-                    <View key={i} style={[s.dot, i === bannerIndex && s.dotActive]} />
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : null}
-        </View>
-
-        {/* ── Categories ── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Categories</Text>
-          {catsLoading ? <CategorySkeleton /> : (
-            <FlatList
-              data={[{ _id: 'all', name: 'All', icon: '🌟' }, ...categories]}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item._id}
-              contentContainerStyle={{ paddingRight: 8 }}
-              renderItem={({ item }) => {
-                const isAll = item._id === 'all';
-                const active = isAll ? selectedCategory === null : selectedCategory === item.name;
-                return (
-                  <TouchableOpacity
-                    onPress={() => setSelectedCategory(isAll ? null : item.name)}
-                    style={[s.catChip, active && { backgroundColor: item.color || COLORS.primary, borderColor: item.color || COLORS.primary }]}
-                  >
-                    <Text style={s.catIcon}>{item.icon || '📚'}</Text>
-                    <Text style={[s.catLabel, active && { color: COLORS.white }]}>{item.name}</Text>
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          )}
-        </View>
-
-        {/* ── Live Classes ── */}
-        {(liveLoading || liveClasses.length > 0) && (
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <View style={s.liveRow}>
-                <View style={s.liveDot} />
-                <Text style={s.sectionTitle}>Live Now</Text>
+          {/* ── Brand New Modern Premium Header ── */}
+          <View style={s.luxuryHeader}>
+            <View style={s.headerTop}>
+              <View>
+                <Text style={s.greetingText}>{greeting()}, 👋</Text>
+                <Text style={s.userNameText}>{user?.name || 'Creative Learner'}</Text>
               </View>
-              <TouchableOpacity onPress={() => navigation.navigate('Live')}>
-                <Text style={s.seeAll}>See All</Text>
-              </TouchableOpacity>
+              <View style={s.actionRow}>
+                <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={s.iconWrapper} activeOpacity={0.7}>
+                  <Icon name="bell" size={22} color={COLORS.textPrimary || '#1E293B'} />
+                  {unreadCount > 0 && (
+                    <View style={s.badgeBlob}>
+                      <Text style={s.badgeBlobText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-            {liveLoading ? (
+
+            {/* Elevated Minimalist Search Bar Container */}
+            <TouchableOpacity onPress={() => navigation.navigate('Search')} style={s.glassSearch} activeOpacity={0.95}>
+              <Icon name="magnify" size={20} color="#64748B" />
+              <Text style={s.searchFieldPlaceholder}>Search premium courses, channels...</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Modern High-Fidelity Floating Stats Row ── */}
+          <View style={s.statsContainer}>
+            {statsLoading ? <StatSkeleton /> : (
+              <View style={s.statsFlexGrid}>
+                {[
+                  { label: 'Courses', value: dashStats?.enrolledCourses ?? user?.enrolledCourses?.length ?? 0, icon: 'book-open-blank-variant', color: '#6366F1', bg: '#EEF2FF' },
+                  { label: 'Streak', value: `${dashStats?.streak ?? user?.streak ?? 0} d`, icon: 'lightning-bolt', color: '#F59E0B', bg: '#FEF3C7' },
+                  { label: 'Points', value: dashStats?.totalPoints ?? user?.points ?? 0, icon: 'shield-star', color: '#10B981', bg: '#ECFDF5' },
+                  { label: 'Tests', value: dashStats?.testsAttempted ?? user?.testAttempts?.length ?? 0, icon: 'file-document-edit', color: '#EF4444', bg: '#FEF2F2' },
+                ].map((stat, i) => (
+                  <View key={i} style={s.statPod}>
+                    <View style={[s.statIconCircle, { backgroundColor: stat.bg }]}>
+                      <Icon name={stat.icon} size={18} color={stat.color} />
+                    </View>
+                    <Text style={s.statCounter}>{stat.value}</Text>
+                    <Text style={s.statSubtitle}>{stat.label}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          {/* ── Premium Cinematic Banners ── */}
+          <View style={s.carouselSection}>
+            {bannersLoading ? <BannerSkeleton /> : banners.length > 0 ? (
+              <View>
+                <FlatList
+                  data={banners}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item._id}
+                  onMomentumScrollEnd={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / (width - 32));
+                    setBannerIndex(idx);
+                  }}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity onPress={() => handleBannerPress(item)} activeOpacity={0.95} style={s.bannerTouch}>
+                      <FastImage
+                        source={{ uri: item.imageUrl }}
+                        style={s.cinematicImage}
+                        resizeMode={FastImage.resizeMode.cover}
+                      />
+                      <LinearGradient colors={['transparent', 'rgba(15,23,42,0.85)']} style={s.bannerScrim}>
+                        {item.title ? <Text style={s.scrimTitle} numberOfLines={1}>{item.title}</Text> : null}
+                        {item.subtitle ? <Text style={s.scrimSubtitle} numberOfLines={1}>{item.subtitle}</Text> : null}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+                />
+                {banners.length > 1 && (
+                  <View style={s.indicatorDotsRow}>
+                    {banners.map((_, i) => (
+                      <View key={i} style={[s.indicatorDot, i === bannerIndex && s.indicatorDotActive]} />
+                    ))}
+                  </View>
+                )}
+              </View>
+            ) : null}
+          </View>
+
+          {/* ── Premium Categories Minimal Chips ── */}
+          <View style={s.contentBlock}>
+            <Text style={s.blockHeadingTitle}>Explore Categories</Text>
+            {catsLoading ? <CategorySkeleton /> : (
               <FlatList
-                data={[1, 2, 3]}
-                horizontal
-                keyExtractor={(i) => String(i)}
-                renderItem={() => <LiveCardSkeleton />}
-                showsHorizontalScrollIndicator={false}
-              />
-            ) : (
-              <FlatList
-                data={liveClasses.slice(0, 6)}
+                data={[{ _id: 'all', name: 'All Tracks', icon: '⚡' }, ...categories]}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                  <LiveClassCard
-                    item={item}
-                    onPress={() => navigation.navigate('LiveClass', { liveClassId: item._id })}
-                  />
-                )}
+                contentContainerStyle={s.categoriesScrollPadding}
+                renderItem={({ item }) => {
+                  const isAll = item._id === 'all';
+                  const active = isAll ? selectedCategory === null : selectedCategory === item.name;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => setSelectedCategory(isAll ? null : item.name)}
+                      activeOpacity={0.8}
+                      style={[s.premiumChip, active && { backgroundColor: '#4F46E5', borderColor: '#4F46E5' }]}
+                    >
+                      <Text style={s.chipEmoji}>{item.icon || '📚'}</Text>
+                      <Text style={[s.chipTextLabel, active && { color: '#FFFFFF' }]}>{item.name}</Text>
+                    </TouchableOpacity>
+                  );
+                }}
               />
             )}
           </View>
-        )}
 
-        {/* ── Courses ── */}
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>Popular Courses</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Courses')}>
-              <Text style={s.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          {coursesLoading ? (
-            [1, 2, 3].map((i) => <CourseCardSkeleton key={i} />)
-          ) : filteredCourses.length === 0 ? (
-            <View style={s.empty}>
-              <Icon name="book-open-outline" size={48} color={COLORS.textLight} />
-              <Text style={s.emptyText}>No courses found</Text>
+          {/* ── Immersive Pulse Live Classes Section ── */}
+          {(liveLoading || liveClasses.length > 0) && (
+            <View style={s.contentBlock}>
+              <View style={s.blockHeaderFlex}>
+                <View style={s.liveBadgeIndicatorRow}>
+                  <View style={s.livePulseRadar} />
+                  <Text style={s.blockHeadingTitle}>Live Broadcasts</Text>
+                </View>
+                <TouchableOpacity onPress={() => navigation.navigate('Live')} activeOpacity={0.6}>
+                  <Text style={s.actionLinkText}>See Live Channels</Text>
+                </TouchableOpacity>
+              </View>
+              {liveLoading ? (
+                <FlatList
+                  data={[1, 2, 3]}
+                  horizontal
+                  keyExtractor={(i) => String(i)}
+                  renderItem={() => <LiveCardSkeleton />}
+                  showsHorizontalScrollIndicator={false}
+                />
+              ) : (
+                <FlatList
+                  data={liveClasses.slice(0, 6)}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingRight: 16 }}
+                  keyExtractor={(item) => item._id}
+                  renderItem={({ item }) => (
+                    <LiveClassCard
+                      item={item}
+                      onPress={() => navigation.navigate('LiveClass', { liveClassId: item._id })}
+                    />
+                  )}
+                />
+              )}
             </View>
-          ) : (
-            filteredCourses.slice(0, 6).map((course) => (
-              <CourseCard
-                key={course._id}
-                course={course}
-                onPress={() => navigation.navigate('CourseDetail', { courseId: course._id })}
-              />
-            ))
           )}
-        </View>
 
-        <View style={{ height: 24 }} />
-      </ScrollView>
-    </View>
+          {/* ── Popular Curated Courses ── */}
+          <View style={s.contentBlock}>
+            <View style={s.blockHeaderFlex}>
+              <Text style={s.blockHeadingTitle}>Trending Programs</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Courses')} activeOpacity={0.6}>
+                <Text style={s.actionLinkText}>View Catalog</Text>
+              </TouchableOpacity>
+            </View>
+            {coursesLoading ? (
+              [1, 2, 3].map((i) => <CourseCardSkeleton key={i} />)
+            ) : filteredCourses.length === 0 ? (
+              <View style={s.fallbackState}>
+                <Icon name="cloud-search-outline" size={44} color="#94A3B8" />
+                <Text style={s.fallbackStateText}>No tailored tracks available right now.</Text>
+              </View>
+            ) : (
+              filteredCourses.slice(0, 6).map((course) => (
+                <CourseCard
+                  key={course._id}
+                  course={course}
+                  onPress={() => navigation.navigate('CourseDetail', { courseId: course._id })}
+                />
+              ))
+            )}
+          </View>
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+
   );
 };
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  greeting: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontFamily: F.urbanist },
-  userName: { fontSize: 20, fontWeight: '600', color: COLORS.white, fontFamily: F.urbanist },
-  headerActions: { flexDirection: 'row', gap: 4 },
-  headerBtn: { padding: 8, position: 'relative' },
-  badge: { position: 'absolute', top: 4, right: 4, backgroundColor: COLORS.error, borderRadius: 8, minWidth: 16, height: 16, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 2 },
-  badgeText: { color: COLORS.white, fontSize: 9, fontWeight: '700' },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, gap: 10 },
-  searchPlaceholder: { color: COLORS.textSecondary, fontSize: 14, fontFamily: F.urbanist },
+  container: { flex: 1, backgroundColor: '#F8FAFC' }, // Super clean light grey aesthetic backdrop
 
-  statsCard: { flexDirection: 'row', backgroundColor: COLORS.white, marginHorizontal: 16, marginTop: -1, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 8, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, justifyContent: 'space-around' },
-  statItem: { alignItems: 'center', gap: 4 },
-  statValue: { fontSize: 18, fontWeight: '700', fontFamily: F.urbanist },
-  statLabel: { fontSize: 11, color: COLORS.textSecondary, fontFamily: F.urbanist },
+  // Luxury White Clean Header Configuration
+  luxuryHeader: { backgroundColor: '#FFFFFF', paddingTop: 60, paddingBottom: 24, paddingHorizontal: 16, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.03, shadowRadius: 15, elevation: 3 },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  greetingText: { fontSize: 13, color: '#64748B', fontFamily: F_FAMILY, textTransform: 'uppercase', letterSpacing: 0.5 },
+  userNameText: { fontSize: 22, color: '#0F172A', fontFamily: F_FAMILY, marginTop: 2 },
+  actionRow: { flexDirection: 'row', alignItems: 'center' },
+  iconWrapper: { backgroundColor: '#F1F5F9', padding: 10, borderRadius: 14, position: 'relative' },
+  badgeBlob: { position: 'absolute', top: -2, right: -2, backgroundColor: '#EF4444', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 3, borderWidth: 2, borderColor: '#FFFFFF' },
+  badgeBlobText: { color: '#FFFFFF', fontSize: 9, fontFamily: F_FAMILY },
+  glassSearch: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
+  searchFieldPlaceholder: { color: '#64748B', fontSize: 14, fontFamily: F_FAMILY },
 
-  section: { paddingHorizontal: 16, marginTop: 24 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: COLORS.textPrimary, fontFamily: F.urbanist },
-  seeAll: { color: COLORS.primary, fontSize: 13, fontWeight: '600', fontFamily: F.urbanist },
-  liveRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  liveDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.live },
+  // Micro-Metrics Dynamic Dashboard Stats
+  statsContainer: { paddingHorizontal: 16, marginTop: -15 },
+  statsFlexGrid: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 20, paddingVertical: 16, paddingHorizontal: 12, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.06, shadowRadius: 20, elevation: 6, justifyContent: 'space-between' },
+  statPod: { alignItems: 'center', flex: 1 },
+  statIconCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  statCounter: { fontSize: 16, color: '#0F172A', fontFamily: F_FAMILY },
+  statSubtitle: { fontSize: 11, color: '#94A3B8', fontFamily: F_FAMILY, marginTop: 1 },
 
-  bannerImage: { width: width - 32, height: 160, borderRadius: 16 },
-  bannerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.45)', borderBottomLeftRadius: 16, borderBottomRightRadius: 16, padding: 12 },
-  bannerTitle: { color: COLORS.white, fontSize: 15, fontWeight: '700', fontFamily: F.urbanist },
-  bannerSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: F.urbanist, marginTop: 2 },
-  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: 8, gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.border },
-  dotActive: { width: 18, backgroundColor: COLORS.primary },
+  // Structural Modular Content Divisions 
+  contentBlock: { paddingHorizontal: 16, marginTop: 28 },
+  blockHeaderFlex: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  blockHeadingTitle: { fontSize: 18, color: '#0F172A', fontFamily: F_FAMILY },
+  actionLinkText: { color: '#4F46E5', fontSize: 13, fontFamily: F_FAMILY },
 
-  catChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.white, borderWidth: 1.5, borderColor: COLORS.border, marginRight: 8 },
-  catIcon: { fontSize: 16 },
-  catLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500', fontFamily: F.urbanist },
+  // Cinematic Marketing Sliders
+  carouselSection: { paddingHorizontal: 16, marginTop: 24 },
+  bannerTouch: { width: width - 32, height: 165, borderRadius: 20, overflow: 'hidden' },
+  cinematicImage: { width: '100%', height: '100%' },
+  bannerScrim: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, paddingTop: 40 },
+  scrimTitle: { color: '#FFFFFF', fontSize: 16, fontFamily: F_FAMILY },
+  scrimSubtitle: { color: '#E2E8F0', fontSize: 12, fontFamily: F_FAMILY, marginTop: 3 },
+  indicatorDotsRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 10, gap: 6 },
+  indicatorDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#CBD5E1' },
+  indicatorDotActive: { width: 18, backgroundColor: '#4F46E5' },
 
-  empty: { alignItems: 'center', paddingVertical: 32 },
-  emptyText: { fontSize: 15, color: COLORS.textSecondary, marginTop: 10, fontFamily: F.urbanist },
+  // Minimal Premium Segment Control Chips
+  categoriesScrollPadding: { paddingRight: 4 },
+  premiumChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', marginRight: 10 },
+  chipEmoji: { fontSize: 15 },
+  chipTextLabel: { fontSize: 13, color: '#475569', fontFamily: F_FAMILY },
+
+  // Modern Live Broadcast Pulse Radar Setup
+  liveBadgeIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  livePulseRadar: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#EF4444' },
+
+  // Minimalist Graceful Fallback States
+  fallbackState: { alignItems: 'center', paddingVertical: 40, backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', borderStyle: 'dashed' },
+  fallbackStateText: { fontSize: 14, color: '#64748B', marginTop: 10, fontFamily: F_FAMILY },
 });
 
 export default HomeScreen;
